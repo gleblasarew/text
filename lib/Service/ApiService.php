@@ -113,6 +113,9 @@ class ApiService {
 			$this->logger->logException($e, ['level' => ILogger::INFO]);
 			$content = null;
 		}
+
+		$this->documentService->lock($fileId);
+
 		return new DataResponse([
 			'document' => $document,
 			'session' => $session,

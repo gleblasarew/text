@@ -27,9 +27,13 @@ declare(strict_types=1);
 namespace OCA\Text\Service;
 
 use \InvalidArgumentException;
+use OCA\Text\AppInfo\Application;
 use OCA\Text\Db\Session;
 use OCA\Text\Db\SessionMapper;
 use OCP\DirectEditing\IManager;
+use OCP\Files\Lock\ILock;
+use OCP\Files\Lock\ILockManager;
+use OCP\Files\Lock\LockScope;
 use OCP\IRequest;
 use OCP\Lock\ILockingProvider;
 use function json_encode;
@@ -67,44 +71,18 @@ class DocumentService {
 	 */
 	public const AUTOSAVE_MINIMUM_DELAY = 10;
 
-	/**
-	 * @var string|null
-	 */
-	private $userId;
-	/**
-	 * @var DocumentMapper
-	 */
-	private $documentMapper;
-	/**
-	 * @var SessionMapper
-	 */
-	private $sessionMapper;
-	/**
-	 * @var ILogger
-	 */
-	private $logger;
-	/**
-	 * @var ShareManager
-	 */
-	private $shareManager;
-	/**
-	 * @var StepMapper
-	 */
-	private $stepMapper;
-	/**
-	 * @var IRootFolder
-	 */
-	private $rootFolder;
-	/**
-	 * @var ICache
-	 */
-	private $cache;
-	/**
-	 * @var IAppData
-	 */
-	private $appData;
+	private ?string $userId;
+	private DocumentMapper $documentMapper;
+	private SessionMapper $sessionMapper;
+	private ILogger $logger;
+	private ShareManager $shareManager;
+	private StepMapper $stepMapper;
+	private IRootFolder $rootFolder;
+	private ICache $cache;
+	private IAppData $appData;
+	private ILockManager $lockManager;
 
-	public function __construct(DocumentMapper $documentMapper, StepMapper $stepMapper, SessionMapper $sessionMapper, IAppData $appData, $userId, IRootFolder $rootFolder, ICacheFactory $cacheFactory, ILogger $logger, ShareManager $shareManager, IRequest $request, IManager $directManager, ILockingProvider $lockingProvider) {
+	public function __construct(DocumentMapper $documentMapper, StepMapper $stepMapper, SessionMapper $sessionMapper, IAppData $appData, $userId, IRootFolder $rootFolder, ICacheFactory $cacheFactory, ILogger $logger, ShareManager $shareManager, IRequest $request, IManager $directManager, ILockingProvider $lockingProvider, ILockManager $lockManager) {
 		$this->documentMapper = $documentMapper;
 		$this->stepMapper = $stepMapper;
 		$this->sessionMapper = $sessionMapper;
@@ -115,7 +93,7 @@ class DocumentService {
 		$this->logger = $logger;
 		$this->shareManager = $shareManager;
 		$this->lockingProvider = $lockingProvider;
-
+		$this->lockManager = $lockManager;
 		$token = $request->getParam('token');
 		if ($this->userId === null && $token !== null) {
 			try {
@@ -328,7 +306,13 @@ class DocumentService {
 		}
 		$this->cache->set('document-save-lock-' . $documentId, true, 10);
 		try {
-			$file->putContent($autoaveDocument);
+			$this->lockManager->runInScope(new LockScope(
+				$file,
+				ILock::TYPE_APP,
+				Application::APP_NAME
+			), function () use ($file, $autoaveDocument) {
+				$file->putContent($autoaveDocument);
+			});
 		} catch (LockedException $e) {
 			// Ignore lock since it might occur when multiple people save at the same time
 			return $document;
@@ -348,6 +332,8 @@ class DocumentService {
 	 */
 	public function resetDocument($documentId, $force = false): void {
 		try {
+			$this->unlock($documentId);
+
 			$document = $this->documentMapper->find($documentId);
 
 			if ($force || !$this->hasUnsavedChanges($document)) {
@@ -489,5 +475,31 @@ class DocumentService {
 		}
 
 		return true;
+	}
+
+	public function lock(int $fileId) {
+		if (!$this->lockManager->isLockProviderAvailable()) {
+			return;
+		}
+
+		$file = $this->getFileById($fileId);
+		$this->lockManager->lock(new LockScope(
+			$file,
+			ILock::TYPE_APP,
+			Application::APP_NAME
+		));
+	}
+
+	public function unlock(int $fileId) {
+		if (!$this->lockManager->isLockProviderAvailable()) {
+			return;
+		}
+
+		$file = $this->getFileById($fileId);
+		$this->lockManager->unlock(new LockScope(
+			$file,
+			ILock::TYPE_APP,
+			Application::APP_NAME
+		));
 	}
 }
