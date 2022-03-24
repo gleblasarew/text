@@ -34,8 +34,11 @@ use OCP\DirectEditing\IManager;
 use OCP\Files\Lock\ILock;
 use OCP\Files\Lock\ILockManager;
 use OCP\Files\Lock\LockScope;
+use OCP\Files\Lock\NoLockProviderException;
+use OCP\Files\Lock\OwnerLockedException;
 use OCP\IRequest;
 use OCP\Lock\ILockingProvider;
+use OCP\PreConditionNotMetException;
 use function json_encode;
 use OC\Files\Node\File;
 use OCA\Text\Db\Document;
@@ -477,29 +480,40 @@ class DocumentService {
 		return true;
 	}
 
-	public function lock(int $fileId) {
+	public function lock(int $fileId): bool {
 		if (!$this->lockManager->isLockProviderAvailable()) {
-			return;
+			return true;
 		}
 
 		$file = $this->getFileById($fileId);
-		$this->lockManager->lock(new LockScope(
-			$file,
-			ILock::TYPE_APP,
-			Application::APP_NAME
-		));
+		try {
+			$this->lockManager->lock(new LockScope(
+				$file,
+				ILock::TYPE_APP,
+				Application::APP_NAME
+			));
+		} catch (NoLockProviderException $e) {
+		} catch (OwnerLockedException $e) {
+			return false;
+		} catch (PreConditionNotMetException $e) {
+		}
+		return true;
 	}
 
-	public function unlock(int $fileId) {
+	public function unlock(int $fileId): void {
 		if (!$this->lockManager->isLockProviderAvailable()) {
 			return;
 		}
 
 		$file = $this->getFileById($fileId);
-		$this->lockManager->unlock(new LockScope(
-			$file,
-			ILock::TYPE_APP,
-			Application::APP_NAME
-		));
+		try {
+			$this->lockManager->unlock(new LockScope(
+				$file,
+				ILock::TYPE_APP,
+				Application::APP_NAME
+			));
+		} catch (NoLockProviderException $e) {
+		} catch (PreConditionNotMetException $e) {
+		}
 	}
 }

@@ -114,7 +114,10 @@ class ApiService {
 			$content = null;
 		}
 
-		$this->documentService->lock($fileId);
+		$isLocked = $this->documentService->lock($fileId);
+		if (!$isLocked) {
+			$readOnly = true;
+		}
 
 		return new DataResponse([
 			'document' => $document,
