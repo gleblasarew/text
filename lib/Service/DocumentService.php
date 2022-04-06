@@ -33,7 +33,7 @@ use OCA\Text\Db\SessionMapper;
 use OCP\DirectEditing\IManager;
 use OCP\Files\Lock\ILock;
 use OCP\Files\Lock\ILockManager;
-use OCP\Files\Lock\LockScope;
+use OCP\Files\Lock\LockContext;
 use OCP\Files\Lock\NoLockProviderException;
 use OCP\Files\Lock\OwnerLockedException;
 use OCP\IRequest;
@@ -309,7 +309,7 @@ class DocumentService {
 		}
 		$this->cache->set('document-save-lock-' . $documentId, true, 10);
 		try {
-			$this->lockManager->runInScope(new LockScope(
+			$this->lockManager->runInScope(new LockContext(
 				$file,
 				ILock::TYPE_APP,
 				Application::APP_NAME
@@ -487,7 +487,7 @@ class DocumentService {
 
 		$file = $this->getFileById($fileId);
 		try {
-			$this->lockManager->lock(new LockScope(
+			$this->lockManager->lock(new LockContext(
 				$file,
 				ILock::TYPE_APP,
 				Application::APP_NAME
@@ -507,7 +507,7 @@ class DocumentService {
 
 		$file = $this->getFileById($fileId);
 		try {
-			$this->lockManager->unlock(new LockScope(
+			$this->lockManager->unlock(new LockContext(
 				$file,
 				ILock::TYPE_APP,
 				Application::APP_NAME
