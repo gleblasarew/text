@@ -788,6 +788,7 @@ export default {
 
 	#editor-wrapper {
 		@import './../../css/prosemirror';
+		@import './../../css/custom';
 
 		&:not(.richEditor) .ProseMirror {
 			pre {

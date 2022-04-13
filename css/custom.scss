@@ -1,0 +1,62 @@
+h1::before {
+    counter-increment: section;
+    content: counter(section) " ";
+    display: inline-block;
+    flex: 0 0 50px;
+    text-align:right;
+    color: #999;
+    padding-right: 10px;
+    letter-spacing:-0.1em;
+}
+
+h1 {
+    counter-reset: subsection;
+    display: flex;
+}
+
+h2::before {
+    counter-increment: subsection;
+    content: counter(section) "." counter(subsection) " ";
+    display: inline-block;
+    flex: 0 0 50px;
+    text-align:right;
+    color: #999;
+    padding-right: 10px;
+    letter-spacing:0;
+} 
+
+h2{
+    display: flex;
+}
+
+h3::before {
+    counter-increment: subsection;
+    content: counter(section) "." counter(subsection) " ";
+    flex: 0 0 50px;
+    text-align:right;
+    color: #999;
+    padding-right: 10px;
+    letter-spacing:0;
+}
+
+h3 {
+    display: flex;
+}
+
+p{
+    display: flex;
+}
+
+p::before {
+    counter-increment: subsection;
+    content: counter(section) "." counter(subsection) " ";
+    flex: 0 0 50px;
+    text-align:right;
+    color: #999;
+    padding-right: 10px;
+    letter-spacing:0;
+}
+
+p {
+    display: flex;
+}
